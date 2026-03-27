@@ -1,0 +1,39 @@
+:root {
+  --bg-deep:    #0a0f0d;
+  --bg-card:    #111a15;
+  --bg-hover:   #162019;
+  --border:     #1e2e24;
+  --border-lit: #2a4033;
+  --gold:       #c9a84c;
+  --gold-dim:   #8a6e2f;
+  --gold-glow:  rgba(201,168,76,0.12);
+  --green-dark: #0d3022;
+  --green-mid:  #155c3a;
+  --text-hi:    #e8e2d4;
+  --text-mid:   #9a9488;
+  --text-dim:   #5a5650;
+  --coral:      #c97b4c;
+  --blue:       #4c8ec9;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans:  'DM Sans', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 2px; }
+
+/* Selection */
+::selection { background: var(--gold-glow); color: var(--gold); }

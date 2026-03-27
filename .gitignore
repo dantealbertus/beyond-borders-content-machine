@@ -1,0 +1,22 @@
+# Environment variables — nooit committen
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build output
+frontend/build/
+frontend/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
