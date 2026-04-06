@@ -34,31 +34,40 @@ class SaveIdeaRequest(BaseModel):
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+async def _claude_post(client, headers, body) -> str:
+    resp = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
+    if not resp.is_success:
+        raise ValueError(f"Anthropic API {resp.status_code}: {resp.text[:400]}")
+    data = resp.json()
+    texts = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
+    if not texts:
+        raise ValueError(f"Geen tekst. stop_reason={data.get('stop_reason')}")
+    return "\n".join(texts)
+
+
 async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str:
-    async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "anthropic-beta": "web-search-2025-03-05",
-                "content-type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-6",
-                "max_tokens": max_tokens,
-                "system": system,
-                "messages": [{"role": "user", "content": user}],
-                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
-            },
-        )
-        if not resp.is_success:
-            raise ValueError(f"Anthropic API {resp.status_code}: {resp.text[:500]}")
-        data = resp.json()
-        texts = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
-        if not texts:
-            raise ValueError(f"Geen tekst in Claude-antwoord. stop_reason={data.get('stop_reason')} content_types={[b.get('type') for b in data.get('content', [])]}")
-        return "\n".join(texts)
+    """Try with web search; fall back to plain Claude if unavailable."""
+    base_headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    base_body = {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    async with httpx.AsyncClient(timeout=90) as client:
+        try:
+            return await _claude_post(
+                client,
+                {**base_headers, "anthropic-beta": "web-search-2025-03-05"},
+                {**base_body, "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]},
+            )
+        except Exception:
+            # Web search unavailable or failed — fall back to plain call
+            return await _claude_post(client, base_headers, base_body)
 
 
 async def claude_json(system: str, user: str, max_tokens: int = 2000) -> Union[dict, list]:
