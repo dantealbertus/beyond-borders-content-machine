@@ -634,6 +634,60 @@
 }
 .removeBtn:hover { color: #c97b4c; }
 
+/* ── Post card ───────────────────────────────────────────────────────────── */
+
+.postCard {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+
+.postCard:hover { border-color: var(--border-lit); }
+
+.postCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.postMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.postPreview {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.postTextarea {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-lit);
+  border-radius: 6px;
+  color: var(--text-hi);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 12px;
+  width: 100%;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+  white-space: pre-wrap;
+}
+
+.postTextarea:focus { border-color: var(--gold-dim); }
+
 /* ── Caption modal ───────────────────────────────────────────────────────── */
 
 .modalOverlay {

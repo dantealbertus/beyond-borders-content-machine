@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
 import { useIdeas } from './useIdeas';
+import { usePosts } from './usePosts';
 import styles from './App.module.css';
 
 // ── Small UI atoms ───────────────────────────────────────────────────────────
@@ -544,18 +545,25 @@ function ContentResult({ result, contentType }) {
   );
 }
 
-function ContentGenerator({ idea, onClose }) {
+function ContentGenerator({ idea, onClose, onSavePost }) {
   const [platform, setPlatform] = useState('instagram');
   const [contentType, setContentType] = useState('instagram_carousel');
   const [extraContext, setExtraContext] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
 
   const switchPlatform = (p) => {
     setPlatform(p);
     setContentType(CONTENT_TYPES[p][0].id);
     setResult(null);
+    setSaved(false);
+  };
+
+  const handleSavePost = () => {
+    onSavePost({ title: idea.title, platform, contentType, data: result });
+    setSaved(true);
   };
 
   const generate = async () => {
@@ -617,15 +625,136 @@ function ContentGenerator({ idea, onClose }) {
         </button>
 
         {error && <p className={styles.error}>{error}</p>}
+        {result && (
+          <button
+            className={styles.saveBtn}
+            style={{ alignSelf: 'flex-start' }}
+            onClick={handleSavePost}
+            disabled={saved}
+          >
+            {saved ? '✓ Opgeslagen in Posts' : '+ Opslaan als post'}
+          </button>
+        )}
         <ContentResult result={result} contentType={contentType} />
       </div>
     </div>
   );
 }
 
+// ── Posts board ───────────────────────────────────────────────────────────────
+
+const TYPE_LABELS = {
+  instagram_carousel: 'Carrousel',
+  instagram_reel:     'Reel',
+  instagram_story:    'Story Reeks',
+  linkedin_verhaal:   'Verhaalpost',
+  linkedin_contrair:  'Contraire Post',
+  linkedin_lijst:     'Lijstpost',
+  linkedin_howto:     'Hoe-doe-je-het',
+};
+
+const STATUS_COLORS = { concept: 'gold', klaar: 'blue', geplaatst: 'green' };
+
+function extractMainText(data, contentType) {
+  if (!data) return '';
+  if (contentType === 'instagram_carousel') return data.slides?.map(s => `Slide ${s.nummer}: ${s.tekst}`).join('\n\n') + (data.caption ? `\n\nCaption:\n${data.caption}` : '');
+  if (contentType === 'instagram_reel') return `Hook: ${data.hook}\n\nContext: ${data.context}\n\nWaarde: ${data.waarde}\n\nCTA: ${data.cta}` + (data.caption ? `\n\nCaption:\n${data.caption}` : '');
+  if (contentType === 'instagram_story') return data.stories?.map(s => `Story ${s.nummer}: ${s.tekst}${s.poll_opties ? '\nPoll: ' + s.poll_opties.join(' / ') : ''}`).join('\n\n') || '';
+  return data.post || '';
+}
+
+function PostEditor({ post, onSave, onClose }) {
+  const [text, setText] = useState(() => post.editedText ?? extractMainText(post.data, post.contentType));
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
+        <button className={styles.modalClose} onClick={onClose}>✕</button>
+        <h2 className={styles.modalTitle}>Post bewerken</h2>
+        <p className={styles.modalTopic}>{post.title}</p>
+        <div className={styles.postMeta}>
+          <Badge color={post.platform === 'instagram' ? 'coral' : 'blue'}>{post.platform}</Badge>
+          <Badge color="dim">{TYPE_LABELS[post.contentType]}</Badge>
+        </div>
+        <textarea
+          className={styles.postTextarea}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          rows={16}
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className={styles.generateBtn} onClick={() => { onSave(text); onClose(); }}>
+            Opslaan
+          </button>
+          <button className={styles.saveBtn} onClick={onClose}>Annuleren</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PostsBoard({ posts, update, remove }) {
+  const [editPost, setEditPost] = useState(null);
+
+  const copyText = (post) => {
+    const text = post.editedText ?? extractMainText(post.data, post.contentType);
+    navigator.clipboard.writeText(text);
+  };
+
+  return (
+    <>
+      <Section title={`Posts (${posts.length})`} icon="✦" onRefresh={() => {}} loading={false}>
+        {posts.length === 0 && (
+          <p className={styles.empty}>Nog geen posts opgeslagen. Genereer content via het Ideeënboard.</p>
+        )}
+        {posts.map(post => (
+          <div key={post.id} className={styles.postCard}>
+            <div className={styles.postCardTop}>
+              <div className={styles.postMeta}>
+                <Badge color={post.platform === 'instagram' ? 'coral' : 'blue'}>{post.platform}</Badge>
+                <Badge color="dim">{TYPE_LABELS[post.contentType]}</Badge>
+                <Badge color={STATUS_COLORS[post.status] || 'gold'}>{post.status}</Badge>
+              </div>
+              <span className={styles.ideaDate}>{new Date(post.savedAt).toLocaleDateString('nl-NL')}</span>
+            </div>
+            <p className={styles.ideaTitle}>{post.title}</p>
+            <p className={styles.postPreview}>
+              {(post.editedText ?? extractMainText(post.data, post.contentType)).slice(0, 140)}…
+            </p>
+            <div className={styles.ideaActions}>
+              <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 14 }}
+                onClick={() => setEditPost(post)}>
+                ✎ Bewerken
+              </button>
+              <button className={styles.saveBtn} onClick={() => copyText(post)}>
+                ⎘ Kopiëren
+              </button>
+              <div className={styles.statusBtns}>
+                {['concept', 'klaar', 'geplaatst'].map(s => (
+                  <button key={s}
+                    className={`${styles.statusBtn} ${post.status === s ? styles.statusActive : ''}`}
+                    onClick={() => update(post.id, { status: s })}>{s}</button>
+                ))}
+              </div>
+              <button className={styles.removeBtn} onClick={() => remove(post.id)}>✕</button>
+            </div>
+          </div>
+        ))}
+      </Section>
+      {editPost && (
+        <PostEditor
+          post={editPost}
+          onSave={(text) => update(editPost.id, { editedText: text })}
+          onClose={() => setEditPost(null)}
+        />
+      )}
+    </>
+  );
+}
+
 // ── Ideas board ───────────────────────────────────────────────────────────────
 
-function IdeasBoard({ ideas, onUpdateStatus, onRemove }) {
+function IdeasBoard({ ideas, onUpdateStatus, onRemove, onSavePost }) {
   const [captionIdea, setCaptionIdea] = useState(null);
 
   const statusColors = { saved: 'gold', draft: 'blue', used: 'green' };
@@ -678,7 +807,7 @@ function IdeasBoard({ ideas, onUpdateStatus, onRemove }) {
       </Section>
 
       {captionIdea && (
-        <ContentGenerator idea={captionIdea} onClose={() => setCaptionIdea(null)} />
+        <ContentGenerator idea={captionIdea} onClose={() => setCaptionIdea(null)} onSavePost={onSavePost} />
       )}
     </>
   );
@@ -690,17 +819,26 @@ const TABS = [
   { id: 'news',      label: 'Nieuws & Artikelen',   icon: '◈' },
   { id: 'instagram', label: 'Instagram Inspiratie',  icon: '◉' },
   { id: 'ideas',     label: 'Ideeënboard',           icon: '◇' },
+  { id: 'posts',     label: 'Posts',                 icon: '✦' },
 ];
 
 export default function App() {
   const { ideas, save, updateStatus, remove } = useIdeas();
+  const { posts, save: savePost, update: updatePost, remove: removePost } = usePosts();
   const [activeTab, setActiveTab] = useState('news');
   const [toast, setToast] = useState(null);
 
   const handleSave = (idea) => {
     save(idea);
     setActiveTab('ideas');
-    setToast(`"${idea.title.slice(0, 40)}" opgeslagen`);
+    setToast(`"${idea.title.slice(0, 40)}" opgeslagen als idee`);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleSavePost = (post) => {
+    savePost(post);
+    setActiveTab('posts');
+    setToast(`Post opgeslagen`);
     setTimeout(() => setToast(null), 2500);
   };
 
@@ -728,6 +866,9 @@ export default function App() {
               {tab.id === 'ideas' && ideas.length > 0 && (
                 <span className={styles.tabBadge}>{ideas.length}</span>
               )}
+              {tab.id === 'posts' && posts.length > 0 && (
+                <span className={styles.tabBadge}>{posts.length}</span>
+              )}
             </button>
           ))}
         </div>
@@ -736,7 +877,8 @@ export default function App() {
       <main className={styles.main}>
         {activeTab === 'news'      && <NewsSection onSave={handleSave} />}
         {activeTab === 'instagram' && <InstagramSection onSave={handleSave} />}
-        {activeTab === 'ideas'     && <IdeasBoard ideas={ideas} onUpdateStatus={updateStatus} onRemove={remove} />}
+        {activeTab === 'ideas'     && <IdeasBoard ideas={ideas} onUpdateStatus={updateStatus} onRemove={remove} onSavePost={handleSavePost} />}
+        {activeTab === 'posts'     && <PostsBoard posts={posts} update={updatePost} remove={removePost} />}
       </main>
 
       {toast && <div className={styles.toast}>{toast}</div>}
