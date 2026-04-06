@@ -259,29 +259,39 @@ async def get_instagram_posts(
     return {"data": all_posts[:50], "fetched_at": datetime.utcnow().isoformat()}
 
 
-@app.post("/api/generate-caption")
-async def generate_caption(payload: dict):
-    """Generate an Instagram caption based on a news item or idea."""
+@app.post("/api/generate-content")
+async def generate_content(payload: dict):
+    """Generate content using the Beyond Borders Protocol framework."""
+    from content_framework import BRAND_CONTEXT, INSTAGRAM_RULES, LINKEDIN_RULES, FORMATS
+
     topic = payload.get("topic", "")
-    style = payload.get("style", "educatief")  # educatief | inspirerend | cijfers
-    language = payload.get("language", "nl")
+    platform = payload.get("platform", "instagram")
+    content_type = payload.get("content_type", "instagram_carousel")
+    extra_context = payload.get("extra_context", "")
 
-    system = f"""Je bent een social media expert voor een Bali vastgoed investment adviseur 
-die Nederlandse ondernemers begeleidt bij het investeren in villa's op Bali.
+    fmt = FORMATS.get(content_type)
+    if not fmt:
+        raise HTTPException(400, f"Onbekend content type: {content_type}")
 
-Schrijf een Instagram caption die:
-- Begint met een sterke hook (eerste zin trekt direct aandacht)
-- Stijl: {style}
-- Taal: {'Nederlands' if language == 'nl' else 'Engels'}
-- 150-250 woorden
-- Eindigt met een duidelijke call-to-action
-- 5-8 relevante hashtags onderaan
-- Geen generieke AI-taal, schrijf als een echte ondernemer die dit zelf heeft meegemaakt
+    platform_rules = INSTAGRAM_RULES if platform == "instagram" else LINKEDIN_RULES
 
-Return ONLY JSON: {{"caption": "...", "hashtags": ["#...", "..."], "hook": "eerste zin"}}"""
+    extra = f"\nExtra context (klantuitspraak / anekdote / situatie):\n{extra_context}" if extra_context else ""
+
+    system = f"""Je bent een contentspecialist voor Beyond Borders Protocol.
+
+MERKCONTEXT:
+{BRAND_CONTEXT}
+
+{platform_rules}
+
+{fmt['instructions']}
+
+Retourneer ALLEEN geldige JSON, geen markdown, geen uitleg erbuiten."""
+
+    user = f"Onderwerp: {topic}{extra}"
 
     try:
-        result = await claude_json(system, f"Schrijf een caption over: {topic}")
-        return {"data": result}
+        result = await claude_json(system, user, max_tokens=3000)
+        return {"data": result, "format": content_type, "platform": platform}
     except Exception as e:
-        raise HTTPException(500, f"Caption generation failed: {str(e)}")
+        raise HTTPException(500, f"Content generatie mislukt: {str(e)}")

@@ -430,21 +430,141 @@ function InstagramSection({ onSave }) {
   );
 }
 
-// ── Caption generator modal ───────────────────────────────────────────────────
+// ── Content generator modal ───────────────────────────────────────────────────
 
-function CaptionGenerator({ idea, onClose }) {
-  const [style, setStyle] = useState('educatief');
-  const [language, setLanguage] = useState('nl');
+const CONTENT_TYPES = {
+  instagram: [
+    { id: 'instagram_carousel', label: 'Carrousel (educatief)' },
+    { id: 'instagram_reel',     label: 'Reel Script (30 sec)' },
+    { id: 'instagram_story',    label: 'Story Reeks' },
+  ],
+  linkedin: [
+    { id: 'linkedin_verhaal',   label: 'Verhaalpost' },
+    { id: 'linkedin_contrair',  label: 'Contraire Post' },
+    { id: 'linkedin_lijst',     label: 'Lijstpost' },
+    { id: 'linkedin_howto',     label: 'Hoe-doe-je-het' },
+  ],
+};
+
+function ContentResult({ result, contentType }) {
+  if (!result) return null;
+
+  // Carrousel
+  if (contentType === 'instagram_carousel') return (
+    <div className={styles.captionResult}>
+      <div className={styles.contentSection}>
+        <span className={styles.label}>Slides</span>
+        {result.slides?.map((s, i) => (
+          <div key={i} className={styles.slideRow}>
+            <span className={styles.slideNum}>Slide {s.nummer}</span>
+            <p className={styles.slideText}>{s.tekst}</p>
+            <CopyButton text={s.tekst} />
+          </div>
+        ))}
+      </div>
+      <div className={styles.contentSection}>
+        <div className={styles.captionHeader}>
+          <span className={styles.label}>Caption</span>
+          <CopyButton text={result.caption} />
+        </div>
+        <p className={styles.captionText}>{result.caption}</p>
+        <div className={styles.captionHashtags}>
+          {result.hashtags?.map((h, i) => <span key={i} className={styles.hashtagPill}>{h}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Reel
+  if (contentType === 'instagram_reel') return (
+    <div className={styles.captionResult}>
+      {[['Hook (0-2 sec)', result.hook], ['Context (2-5 sec)', result.context],
+        ['Waarde (5-25 sec)', result.waarde], ['CTA (25-30 sec)', result.cta]].map(([label, text]) => (
+        <div key={label} className={styles.contentSection}>
+          <div className={styles.captionHeader}>
+            <span className={styles.label}>{label}</span>
+            <CopyButton text={text} />
+          </div>
+          <p className={styles.captionText}>{text}</p>
+        </div>
+      ))}
+      <div className={styles.contentSection}>
+        <div className={styles.captionHeader}>
+          <span className={styles.label}>Caption</span>
+          <CopyButton text={result.caption} />
+        </div>
+        <p className={styles.captionText}>{result.caption}</p>
+        <div className={styles.captionHashtags}>
+          {result.hashtags?.map((h, i) => <span key={i} className={styles.hashtagPill}>{h}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Story reeks
+  if (contentType === 'instagram_story') return (
+    <div className={styles.captionResult}>
+      {result.stories?.map((s, i) => (
+        <div key={i} className={styles.contentSection}>
+          <div className={styles.captionHeader}>
+            <span className={styles.label}>Story {s.nummer}</span>
+            <CopyButton text={s.tekst} />
+          </div>
+          <p className={styles.captionText}>{s.tekst}</p>
+          {s.poll_opties && (
+            <div className={styles.pollOpties}>
+              {s.poll_opties.map((o, j) => <span key={j} className={styles.hashtagPill}>{o}</span>)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  // LinkedIn posts (verhaal, contrair, lijst, howto)
+  return (
+    <div className={styles.captionResult}>
+      {result.eerste_regel && (
+        <div className={styles.contentSection}>
+          <div className={styles.captionHeader}>
+            <span className={styles.label}>Eerste regel (zichtbaar voor "zie meer")</span>
+            <CopyButton text={result.eerste_regel} />
+          </div>
+          <p className={styles.captionText} style={{ color: 'var(--gold)' }}>{result.eerste_regel}</p>
+        </div>
+      )}
+      <div className={styles.contentSection}>
+        <div className={styles.captionHeader}>
+          <span className={styles.label}>Volledige post</span>
+          <CopyButton text={result.post} />
+        </div>
+        <p className={styles.captionText}>{result.post}</p>
+      </div>
+    </div>
+  );
+}
+
+function ContentGenerator({ idea, onClose }) {
+  const [platform, setPlatform] = useState('instagram');
+  const [contentType, setContentType] = useState('instagram_carousel');
+  const [extraContext, setExtraContext] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const switchPlatform = (p) => {
+    setPlatform(p);
+    setContentType(CONTENT_TYPES[p][0].id);
+    setResult(null);
+  };
 
   const generate = async () => {
-    setLoading(true);
+    setLoading(true); setError(null);
     try {
-      const res = await api.generateCaption(idea.content || idea.title, style, language);
+      const res = await api.generateContent(idea.content || idea.title, platform, contentType, extraContext);
       setResult(res.data);
     } catch (e) {
-      alert('Caption genereren mislukt: ' + e.message);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -454,55 +574,50 @@ function CaptionGenerator({ idea, onClose }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}>✕</button>
-        <h2 className={styles.modalTitle}>Caption genereren</h2>
+        <h2 className={styles.modalTitle}>Content maken</h2>
         <p className={styles.modalTopic}>{idea.title}</p>
 
         <div className={styles.modalRow}>
-          <label className={styles.label}>Stijl</label>
+          <label className={styles.label}>Platform</label>
           <div className={styles.toggleGroup}>
-            {['educatief', 'inspirerend', 'cijfers'].map(s => (
-              <button
-                key={s}
-                className={`${styles.toggleBtn} ${style === s ? styles.toggleActive : ''}`}
-                onClick={() => setStyle(s)}
-              >{s}</button>
+            <button className={`${styles.toggleBtn} ${platform === 'instagram' ? styles.toggleActive : ''}`}
+              onClick={() => switchPlatform('instagram')}>Instagram</button>
+            <button className={`${styles.toggleBtn} ${platform === 'linkedin' ? styles.toggleActive : ''}`}
+              onClick={() => switchPlatform('linkedin')}>LinkedIn</button>
+          </div>
+        </div>
+
+        <div className={styles.modalRow}>
+          <label className={styles.label}>Type content</label>
+          <div className={styles.toggleGroup} style={{ flexWrap: 'wrap' }}>
+            {CONTENT_TYPES[platform].map(t => (
+              <button key={t.id}
+                className={`${styles.toggleBtn} ${contentType === t.id ? styles.toggleActive : ''}`}
+                onClick={() => { setContentType(t.id); setResult(null); }}>
+                {t.label}
+              </button>
             ))}
           </div>
         </div>
 
         <div className={styles.modalRow}>
-          <label className={styles.label}>Taal</label>
-          <div className={styles.toggleGroup}>
-            {[['nl', '🇳🇱 Nederlands'], ['en', '🇬🇧 English']].map(([v, l]) => (
-              <button
-                key={v}
-                className={`${styles.toggleBtn} ${language === v ? styles.toggleActive : ''}`}
-                onClick={() => setLanguage(v)}
-              >{l}</button>
-            ))}
-          </div>
+          <label className={styles.label}>Extra context (optioneel — klantuitspraak, anekdote, situatie)</label>
+          <textarea
+            className={styles.searchInput}
+            rows={3}
+            value={extraContext}
+            onChange={e => setExtraContext(e.target.value)}
+            placeholder="Bijv: Een klant zei vorige week: 'Ik wist niet waar ik moest beginnen...'"
+            style={{ resize: 'vertical' }}
+          />
         </div>
 
         <button className={styles.generateBtn} onClick={generate} disabled={loading}>
-          {loading ? <><Spinner /> Genereren…</> : '✦ Genereer caption'}
+          {loading ? <><Spinner /> Genereren…</> : '✦ Genereer content'}
         </button>
 
-        {result && (
-          <div className={styles.captionResult}>
-            <div className={styles.captionHeader}>
-              <span className={styles.label}>Caption</span>
-              <CopyButton text={result.caption} />
-            </div>
-            <p className={styles.captionText}>{result.caption}</p>
-            {result.hashtags && (
-              <div className={styles.captionHashtags}>
-                {result.hashtags.map((h, i) => (
-                  <span key={i} className={styles.hashtagPill}>{h}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {error && <p className={styles.error}>{error}</p>}
+        <ContentResult result={result} contentType={contentType} />
       </div>
     </div>
   );
@@ -512,6 +627,7 @@ function CaptionGenerator({ idea, onClose }) {
 
 function IdeasBoard({ ideas, onUpdateStatus, onRemove }) {
   const [captionIdea, setCaptionIdea] = useState(null);
+
   const statusColors = { saved: 'gold', draft: 'blue', used: 'green' };
 
   return (
@@ -542,9 +658,9 @@ function IdeasBoard({ ideas, onUpdateStatus, onRemove }) {
               </div>
             )}
             <div className={styles.ideaActions}>
-              <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 12 }}
+              <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 14 }}
                 onClick={() => setCaptionIdea(idea)}>
-                ✦ Caption
+                ✦ Maak content
               </button>
               <div className={styles.statusBtns}>
                 {['saved', 'draft', 'used'].map(s => (
@@ -562,7 +678,7 @@ function IdeasBoard({ ideas, onUpdateStatus, onRemove }) {
       </Section>
 
       {captionIdea && (
-        <CaptionGenerator idea={captionIdea} onClose={() => setCaptionIdea(null)} />
+        <ContentGenerator idea={captionIdea} onClose={() => setCaptionIdea(null)} />
       )}
     </>
   );

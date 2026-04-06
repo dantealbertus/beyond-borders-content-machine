@@ -39,6 +39,11 @@ export const api = {
     });
     return get(`/api/instagram?${params}`);
   },
-  generateCaption: (topic, style, language) =>
-    post('/api/generate-caption', { topic, style, language }),
+  generateContent: (topic, platform, contentType, extraContext) =>
+    post('/api/generate-content', {
+      topic,
+      platform,
+      content_type: contentType,
+      extra_context: extraContext,
+    }),
 };
