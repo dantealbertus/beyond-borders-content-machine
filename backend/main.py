@@ -52,9 +52,12 @@ async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str
                 "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
             },
         )
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise ValueError(f"Anthropic API {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
         texts = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
+        if not texts:
+            raise ValueError(f"Geen tekst in Claude-antwoord. stop_reason={data.get('stop_reason')} content_types={[b.get('type') for b in data.get('content', [])]}")
         return "\n".join(texts)
 
 
