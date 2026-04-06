@@ -35,7 +35,7 @@ class SaveIdeaRequest(BaseModel):
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str:
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -80,7 +80,14 @@ async def claude_json(system: str, user: str, max_tokens: int = 2000) -> Union[d
         text = next(
             (b["text"] for b in data.get("content", []) if b.get("type") == "text"), ""
         )
-        clean = text.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        clean = text.strip()
+        if clean.startswith("```json"):
+            clean = clean[7:]
+        elif clean.startswith("```"):
+            clean = clean[3:]
+        if clean.endswith("```"):
+            clean = clean[:-3]
+        clean = clean.strip()
         return json.loads(clean)
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -116,9 +123,19 @@ Return ONLY a JSON array with this exact structure, no markdown, no preamble:
 
     try:
         result = await claude_complete(system, f"Search for the latest news about: {query}")
-        clean = result.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+        # Strip markdown code fences properly (lstrip strips chars, not substrings)
+        clean = result.strip()
+        if clean.startswith("```json"):
+            clean = clean[7:]
+        elif clean.startswith("```"):
+            clean = clean[3:]
+        if clean.endswith("```"):
+            clean = clean[:-3]
+        clean = clean.strip()
         start = clean.find("[")
         end = clean.rfind("]") + 1
+        if start == -1 or end == 0:
+            raise ValueError(f"Geen JSON array gevonden in Claude-antwoord. Antwoord: {clean[:300]}")
         articles = json.loads(clean[start:end])
         return {"data": articles, "fetched_at": datetime.utcnow().isoformat()}
     except Exception as e:

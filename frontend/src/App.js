@@ -568,8 +568,13 @@ function ContentGenerator({ idea, onClose, onSavePost }) {
 
   const generate = async () => {
     setLoading(true); setError(null);
+    // Build a complete topic string so Claude always has full context
+    const parts = [idea.title];
+    if (idea.content && idea.content !== idea.title) parts.push(idea.content);
+    if (idea.source) parts.push(`Bron: ${idea.source}`);
+    const topic = parts.join('\n\n');
     try {
-      const res = await api.generateContent(idea.content || idea.title, platform, contentType, extraContext);
+      const res = await api.generateContent(topic, platform, contentType, extraContext);
       setResult(res.data);
     } catch (e) {
       setError(e.message);
