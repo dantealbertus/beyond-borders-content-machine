@@ -41,6 +41,7 @@ async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str
             headers={
                 "x-api-key": ANTHROPIC_API_KEY,
                 "anthropic-version": "2023-06-01",
+                "anthropic-beta": "web-search-2025-03-05",
                 "content-type": "application/json",
             },
             json={
@@ -48,7 +49,7 @@ async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str
                 "max_tokens": max_tokens,
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
-                "tools": [{"type": "web_search_20250305", "name": "web_search"}],
+                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
             },
         )
         resp.raise_for_status()
