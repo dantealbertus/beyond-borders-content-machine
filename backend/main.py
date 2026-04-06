@@ -44,7 +44,7 @@ async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-sonnet-4-6",
                 "max_tokens": max_tokens,
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
@@ -68,7 +68,7 @@ async def claude_json(system: str, user: str, max_tokens: int = 2000) -> Union[d
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-sonnet-4-6",
                 "max_tokens": max_tokens,
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
