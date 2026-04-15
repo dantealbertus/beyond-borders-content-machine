@@ -163,8 +163,9 @@ Return ONLY a JSON array with this exact structure, no markdown, no preamble:
 ]"""
 
     try:
-        result = await claude_complete(system, f"Search for the latest news about: {query}")
-        articles = _extract_json_array(result)
+        articles = await claude_json(system, f"Search for the latest news about: {query}", max_tokens=3000)
+        if not isinstance(articles, list):
+            raise ValueError(f"Verwachtte een lijst, kreeg: {type(articles)}")
         return {"data": articles, "fetched_at": datetime.utcnow().isoformat()}
     except Exception as e:
         raise HTTPException(500, f"News fetch failed: {str(e)}")
