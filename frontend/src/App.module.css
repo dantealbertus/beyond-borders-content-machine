@@ -366,7 +366,7 @@
 }
 
 .searchInput {
-  background: var(--bg-deep);
+  background: var(--bg-input);
   border: 1px solid var(--border-lit);
   border-radius: 6px;
   color: var(--text-hi);
@@ -379,7 +379,7 @@
 }
 
 .searchInput:focus { border-color: var(--gold-dim); }
-.searchInput::placeholder { color: var(--text-dim); }
+.searchInput::placeholder { color: var(--placeholder); }
 
 .searchFilters {
   display: flex;
@@ -397,7 +397,7 @@
 
 .select,
 .filterInput {
-  background: var(--bg-deep);
+  background: var(--bg-input);
   border: 1px solid var(--border-lit);
   border-radius: 6px;
   color: var(--text-hi);
@@ -444,10 +444,10 @@
 }
 
 .hashtagChip {
-  background: var(--bg-deep);
+  background: var(--bg-input);
   border: 1px solid var(--border-lit);
   border-radius: 20px;
-  color: var(--text-dim);
+  color: var(--text-mid);
   font-family: var(--font-sans);
   font-size: 13px;
   padding: 4px 12px;
@@ -611,9 +611,9 @@
 .statusBtn {
   font-size: 14px;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-lit);
   border-radius: 4px;
-  color: var(--text-dim);
+  color: var(--text-mid);
   padding: 5px 12px;
   cursor: pointer;
   transition: all 0.15s;
@@ -671,7 +671,7 @@
 }
 
 .postTextarea {
-  background: var(--bg-deep);
+  background: var(--bg-input);
   border: 1px solid var(--border-lit);
   border-radius: 6px;
   color: var(--text-hi);
@@ -751,7 +751,7 @@
 
 .label {
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-mid);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -795,7 +795,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: var(--bg-deep);
+  background: var(--bg-input);
   border-radius: 6px;
   padding: 10px 12px;
 }

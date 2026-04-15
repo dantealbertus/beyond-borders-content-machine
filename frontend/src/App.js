@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
 import { useIdeas } from './useIdeas';
 import { usePosts } from './usePosts';
@@ -545,20 +545,19 @@ function ContentResult({ result, contentType }) {
   );
 }
 
-function ContentGenerator({ idea, onClose, onSavePost }) {
-  const [platform, setPlatform] = useState('instagram');
-  const [contentType, setContentType] = useState('instagram_carousel');
+function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate }) {
+  const [platform, setPlatform] = useState(generation?.platform || 'instagram');
+  const [contentType, setContentType] = useState(generation?.contentType || 'instagram_carousel');
   const [extraContext, setExtraContext] = useState('');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+
+  const loading = generation?.loading ?? false;
+  const result = generation?.result ?? null;
+  const error = generation?.error ?? null;
 
   const switchPlatform = (p) => {
     setPlatform(p);
     setContentType(CONTENT_TYPES[p][0].id);
-    setResult(null);
-    setSaved(false);
   };
 
   const handleSavePost = () => {
@@ -566,21 +565,8 @@ function ContentGenerator({ idea, onClose, onSavePost }) {
     setSaved(true);
   };
 
-  const generate = async () => {
-    setLoading(true); setError(null);
-    // Build a complete topic string so Claude always has full context
-    const parts = [idea.title];
-    if (idea.content && idea.content !== idea.title) parts.push(idea.content);
-    if (idea.source) parts.push(`Bron: ${idea.source}`);
-    const topic = parts.join('\n\n');
-    try {
-      const res = await api.generateContent(topic, platform, contentType, extraContext);
-      setResult(res.data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerate = () => {
+    onGenerate(idea, platform, contentType, extraContext);
   };
 
   return (
@@ -625,7 +611,7 @@ function ContentGenerator({ idea, onClose, onSavePost }) {
           />
         </div>
 
-        <button className={styles.generateBtn} onClick={generate} disabled={loading}>
+        <button className={styles.generateBtn} onClick={handleGenerate} disabled={loading}>
           {loading ? <><Spinner /> Genereren…</> : '✦ Genereer content'}
         </button>
 
@@ -759,7 +745,7 @@ function PostsBoard({ posts, update, remove }) {
 
 // ── Ideas board ───────────────────────────────────────────────────────────────
 
-function IdeasBoard({ ideas, onUpdateStatus, onRemove, onSavePost }) {
+function IdeasBoard({ ideas, onUpdateStatus, onRemove, onSavePost, generations, onGenerate }) {
   const [captionIdea, setCaptionIdea] = useState(null);
 
   const statusColors = { saved: 'gold', draft: 'blue', used: 'green' };
@@ -794,7 +780,9 @@ function IdeasBoard({ ideas, onUpdateStatus, onRemove, onSavePost }) {
             <div className={styles.ideaActions}>
               <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 14 }}
                 onClick={() => setCaptionIdea(idea)}>
-                ✦ Maak content
+                {generations[idea.id]?.loading ? <><Spinner /> Genereren…</> :
+                 generations[idea.id]?.result ? '✦ Content klaar' :
+                 '✦ Maak content'}
               </button>
               <div className={styles.statusBtns}>
                 {['saved', 'draft', 'used'].map(s => (
@@ -812,7 +800,13 @@ function IdeasBoard({ ideas, onUpdateStatus, onRemove, onSavePost }) {
       </Section>
 
       {captionIdea && (
-        <ContentGenerator idea={captionIdea} onClose={() => setCaptionIdea(null)} onSavePost={onSavePost} />
+        <ContentGenerator
+          idea={captionIdea}
+          onClose={() => setCaptionIdea(null)}
+          onSavePost={onSavePost}
+          generation={generations[captionIdea.id] || null}
+          onGenerate={onGenerate}
+        />
       )}
     </>
   );
@@ -832,19 +826,42 @@ export default function App() {
   const { posts, save: savePost, update: updatePost, remove: removePost } = usePosts();
   const [activeTab, setActiveTab] = useState('news');
   const [toast, setToast] = useState(null);
+  const [generations, setGenerations] = useState({});
+  const toastTimer = useRef(null);
+
+  const showToast = useCallback((msg) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const startGeneration = useCallback(async (idea, platform, contentType, extraContext) => {
+    const id = idea.id;
+    setGenerations(prev => ({ ...prev, [id]: { loading: true, result: null, error: null, platform, contentType } }));
+    const parts = [idea.title];
+    if (idea.content && idea.content !== idea.title) parts.push(idea.content);
+    if (idea.source) parts.push(`Bron: ${idea.source}`);
+    const topic = parts.join('\n\n');
+    try {
+      const res = await api.generateContent(topic, platform, contentType, extraContext);
+      setGenerations(prev => ({ ...prev, [id]: { ...prev[id], loading: false, result: res.data } }));
+      showToast(`Content klaar: "${idea.title.slice(0, 35)}"`);
+    } catch (e) {
+      setGenerations(prev => ({ ...prev, [id]: { ...prev[id], loading: false, error: e.message } }));
+      showToast(`Genereren mislukt`);
+    }
+  }, [showToast]);
 
   const handleSave = (idea) => {
     save(idea);
     setActiveTab('ideas');
-    setToast(`"${idea.title.slice(0, 40)}" opgeslagen als idee`);
-    setTimeout(() => setToast(null), 2500);
+    showToast(`"${idea.title.slice(0, 40)}" opgeslagen als idee`);
   };
 
   const handleSavePost = (post) => {
     savePost(post);
     setActiveTab('posts');
-    setToast(`Post opgeslagen`);
-    setTimeout(() => setToast(null), 2500);
+    showToast(`Post opgeslagen`);
   };
 
   return (
@@ -882,7 +899,7 @@ export default function App() {
       <main className={styles.main}>
         {activeTab === 'news'      && <NewsSection onSave={handleSave} />}
         {activeTab === 'instagram' && <InstagramSection onSave={handleSave} />}
-        {activeTab === 'ideas'     && <IdeasBoard ideas={ideas} onUpdateStatus={updateStatus} onRemove={remove} onSavePost={handleSavePost} />}
+        {activeTab === 'ideas'     && <IdeasBoard ideas={ideas} onUpdateStatus={updateStatus} onRemove={remove} onSavePost={handleSavePost} generations={generations} onGenerate={startGeneration} />}
         {activeTab === 'posts'     && <PostsBoard posts={posts} update={updatePost} remove={removePost} />}
       </main>
 
