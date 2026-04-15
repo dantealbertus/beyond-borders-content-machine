@@ -39,11 +39,12 @@ export const api = {
     });
     return get(`/api/instagram?${params}`);
   },
-  generateContent: (topic, platform, contentType, extraContext) =>
+  generateContent: (topic, platform, contentType, extraContext, hookType) =>
     post('/api/generate-content', {
       topic,
       platform,
       content_type: contentType,
       extra_context: extraContext,
+      hook_type: hookType || '',
     }),
 };

@@ -35,7 +35,7 @@ function CopyButton({ text }) {
 
 // ── Section wrapper ──────────────────────────────────────────────────────────
 
-function Section({ title, icon, children, onRefresh, loading, lastFetched }) {
+function Section({ title, icon, children, onRefresh, loading, lastFetched, extra }) {
   return (
     <section className={`${styles.section} ${styles.sectionActive}`}>
       <div className={styles.sectionHeader}>
@@ -46,6 +46,7 @@ function Section({ title, icon, children, onRefresh, loading, lastFetched }) {
             {new Date(lastFetched).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
           </span>
         )}
+        {extra}
         <button
           className={styles.refreshBtn}
           onClick={onRefresh}
@@ -438,17 +439,30 @@ function InstagramSection({ onSave }) {
 
 const CONTENT_TYPES = {
   instagram: [
-    { id: 'instagram_carousel', label: 'Carrousel (educatief)' },
-    { id: 'instagram_reel',     label: 'Reel Script (30 sec)' },
-    { id: 'instagram_story',    label: 'Story Reeks' },
+    { id: 'instagram_carousel', label: 'Carousel',    description: 'Educational slide-by-slide breakdown. Best for tips, frameworks, and step-by-step guides.' },
+    { id: 'instagram_reel',     label: 'Reel Script', description: '30-second video script with hook, context, value, and CTA.' },
+    { id: 'instagram_story',    label: 'Story Series', description: 'Multi-slide story sequence, optionally with a poll.' },
   ],
   linkedin: [
-    { id: 'linkedin_verhaal',   label: 'Verhaalpost' },
-    { id: 'linkedin_contrair',  label: 'Contraire Post' },
-    { id: 'linkedin_lijst',     label: 'Lijstpost' },
-    { id: 'linkedin_howto',     label: 'Hoe-doe-je-het' },
+    { id: 'linkedin_verhaal',  label: 'Story Post',      description: 'Personal narrative that builds authority through a real experience.' },
+    { id: 'linkedin_contrair', label: 'Contrarian Post',  description: 'Challenge a common belief in your niche to spark discussion.' },
+    { id: 'linkedin_lijst',    label: 'List Post',        description: 'Scannable numbered list of insights, tips, or lessons.' },
+    { id: 'linkedin_howto',    label: 'How-To Post',      description: 'Step-by-step actionable guide on a specific topic.' },
+  ],
+  twitter: [
+    { id: 'twitter_tutorial',  label: 'Tutorial Thread',  description: 'Step-by-step thread teaching one concept clearly and concisely.' },
+    { id: 'twitter_story',     label: 'Story Thread',     description: 'Narrative thread — a personal journey or client story with a turning point.' },
+    { id: 'twitter_breakdown', label: 'Breakdown Thread', description: 'Deep-dive analysis of a trend, deal, or market insight.' },
   ],
 };
+
+const HOOK_TYPES = [
+  { id: 'curiosity',     label: 'Curiosity',     description: 'Open a knowledge gap — make them need to know more.' },
+  { id: 'story',         label: 'Story',          description: 'Start with a personal moment that pulls the reader in.' },
+  { id: 'value',         label: 'Value',          description: 'Lead immediately with a useful insight or number.' },
+  { id: 'contrarian',    label: 'Contrarian',     description: 'Challenge what your audience thinks they know.' },
+  { id: 'social_proof',  label: 'Social Proof',   description: 'Open with a result, client win, or credibility signal.' },
+];
 
 function ContentResult({ result, contentType }) {
   if (!result) return null;
@@ -525,6 +539,34 @@ function ContentResult({ result, contentType }) {
     </div>
   );
 
+  // Twitter thread
+  if (contentType?.startsWith('twitter_')) {
+    const tweets = result.tweets || result.thread || [];
+    return (
+      <div className={styles.captionResult}>
+        <div className={styles.contentSection}>
+          <span className={styles.label}>Thread ({tweets.length} tweets)</span>
+          {tweets.map((t, i) => (
+            <div key={i} className={styles.slideRow}>
+              <span className={styles.slideNum}>{i + 1}/</span>
+              <p className={styles.slideText}>{t}</p>
+              <CopyButton text={t} />
+            </div>
+          ))}
+        </div>
+        {result.hook && (
+          <div className={styles.contentSection}>
+            <div className={styles.captionHeader}>
+              <span className={styles.label}>Hook tweet</span>
+              <CopyButton text={result.hook} />
+            </div>
+            <p className={styles.captionText} style={{ color: 'var(--gold)' }}>{result.hook}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // LinkedIn posts (verhaal, contrair, lijst, howto)
   return (
     <div className={styles.captionResult}>
@@ -551,8 +593,8 @@ function ContentResult({ result, contentType }) {
 function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate }) {
   const [platform, setPlatform] = useState(generation?.platform || 'instagram');
   const [contentType, setContentType] = useState(generation?.contentType || 'instagram_carousel');
+  const [hookType, setHookType] = useState('');
   const [extraContext, setExtraContext] = useState('');
-  const [saved, setSaved] = useState(false);
 
   const loading = generation?.loading ?? false;
   const result = generation?.result ?? null;
@@ -563,14 +605,12 @@ function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate })
     setContentType(CONTENT_TYPES[p][0].id);
   };
 
-  const handleSavePost = () => {
-    onSavePost({ title: idea.title, platform, contentType, data: result });
-    setSaved(true);
+  const handleGenerate = () => {
+    onGenerate(idea, platform, contentType, extraContext, hookType);
   };
 
-  const handleGenerate = () => {
-    onGenerate(idea, platform, contentType, extraContext);
-  };
+  const selectedFormat = CONTENT_TYPES[platform]?.find(t => t.id === contentType);
+  const selectedHook = HOOK_TYPES.find(h => h.id === hookType);
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -586,30 +626,51 @@ function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate })
               onClick={() => switchPlatform('instagram')}>Instagram</button>
             <button className={`${styles.toggleBtn} ${platform === 'linkedin' ? styles.toggleActive : ''}`}
               onClick={() => switchPlatform('linkedin')}>LinkedIn</button>
+            <button className={`${styles.toggleBtn} ${platform === 'twitter' ? styles.toggleActive : ''}`}
+              onClick={() => switchPlatform('twitter')}>Twitter / X</button>
           </div>
         </div>
 
         <div className={styles.modalRow}>
-          <label className={styles.label}>Type content</label>
+          <label className={styles.label}>Format</label>
           <div className={styles.toggleGroup} style={{ flexWrap: 'wrap' }}>
             {CONTENT_TYPES[platform].map(t => (
               <button key={t.id}
                 className={`${styles.toggleBtn} ${contentType === t.id ? styles.toggleActive : ''}`}
-                onClick={() => { setContentType(t.id); setResult(null); }}>
+                onClick={() => setContentType(t.id)}>
                 {t.label}
               </button>
             ))}
           </div>
+          {selectedFormat && (
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{selectedFormat.description}</p>
+          )}
         </div>
 
         <div className={styles.modalRow}>
-          <label className={styles.label}>Extra context (optioneel — klantuitspraak, anekdote, situatie)</label>
+          <label className={styles.label}>Hook type <span style={{ color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>(optioneel)</span></label>
+          <div className={styles.toggleGroup} style={{ flexWrap: 'wrap' }}>
+            {HOOK_TYPES.map(h => (
+              <button key={h.id}
+                className={`${styles.toggleBtn} ${hookType === h.id ? styles.toggleActive : ''}`}
+                onClick={() => setHookType(prev => prev === h.id ? '' : h.id)}>
+                {h.label}
+              </button>
+            ))}
+          </div>
+          {selectedHook && (
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>{selectedHook.description}</p>
+          )}
+        </div>
+
+        <div className={styles.modalRow}>
+          <label className={styles.label}>Extra context <span style={{ color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>(optioneel)</span></label>
           <textarea
             className={styles.searchInput}
             rows={3}
             value={extraContext}
             onChange={e => setExtraContext(e.target.value)}
-            placeholder="Bijv: Een klant zei vorige week: 'Ik wist niet waar ik moest beginnen...'"
+            placeholder="Klantuitspraak, anekdote, situatie…"
             style={{ resize: 'vertical' }}
           />
         </div>
@@ -628,13 +689,16 @@ function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate })
 // ── Posts board ───────────────────────────────────────────────────────────────
 
 const TYPE_LABELS = {
-  instagram_carousel: 'Carrousel',
-  instagram_reel:     'Reel',
-  instagram_story:    'Story Reeks',
-  linkedin_verhaal:   'Verhaalpost',
-  linkedin_contrair:  'Contraire Post',
-  linkedin_lijst:     'Lijstpost',
-  linkedin_howto:     'Hoe-doe-je-het',
+  instagram_carousel: 'Carousel',
+  instagram_reel:     'Reel Script',
+  instagram_story:    'Story Series',
+  linkedin_verhaal:   'Story Post',
+  linkedin_contrair:  'Contrarian Post',
+  linkedin_lijst:     'List Post',
+  linkedin_howto:     'How-To Post',
+  twitter_tutorial:   'Tutorial Thread',
+  twitter_story:      'Story Thread',
+  twitter_breakdown:  'Breakdown Thread',
 };
 
 const STATUS_COLORS = { concept: 'gold', klaar: 'blue', geplaatst: 'green', mislukt: 'coral' };
@@ -644,6 +708,7 @@ function extractMainText(data, contentType) {
   if (contentType === 'instagram_carousel') return data.slides?.map(s => `Slide ${s.nummer}: ${s.tekst}`).join('\n\n') + (data.caption ? `\n\nCaption:\n${data.caption}` : '');
   if (contentType === 'instagram_reel') return `Hook: ${data.hook}\n\nContext: ${data.context}\n\nWaarde: ${data.waarde}\n\nCTA: ${data.cta}` + (data.caption ? `\n\nCaption:\n${data.caption}` : '');
   if (contentType === 'instagram_story') return data.stories?.map(s => `Story ${s.nummer}: ${s.tekst}${s.poll_opties ? '\nPoll: ' + s.poll_opties.join(' / ') : ''}`).join('\n\n') || '';
+  if (contentType?.startsWith('twitter_')) return data.tweets?.map((t, i) => `${i + 1}/ ${t}`).join('\n\n') || data.thread?.map((t, i) => `${i + 1}/ ${t}`).join('\n\n') || data.post || '';
   return data.post || '';
 }
 
@@ -677,25 +742,113 @@ function PostEditor({ post, onSave, onClose }) {
   );
 }
 
+const PLATFORM_COLOR = { instagram: 'coral', linkedin: 'blue', twitter: 'gold' };
+const KANBAN_COLS = [
+  { id: 'concept',   label: 'Concept' },
+  { id: 'klaar',     label: 'Ready' },
+  { id: 'geplaatst', label: 'Published' },
+];
+
+function KanbanCard({ post, onEdit, onCopy, onMove, onRemove }) {
+  const movable = KANBAN_COLS.filter(c => c.id !== post.status);
+  return (
+    <div className={styles.kanbanCard}>
+      <div className={styles.kanbanCardMeta}>
+        <Badge color={PLATFORM_COLOR[post.platform] || 'gold'}>{post.platform}</Badge>
+        <Badge color="dim">{TYPE_LABELS[post.contentType]}</Badge>
+        {post.status === 'genereren' && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-dim)' }}>
+            <Spinner /> Genereren…
+          </span>
+        )}
+      </div>
+      <p className={styles.kanbanCardTitle}>{post.title}</p>
+      {post.status !== 'genereren' && (
+        <div className={styles.kanbanCardActions}>
+          <button className={styles.kanbanMoveBtn} onClick={() => onEdit(post)}>✎</button>
+          <button className={styles.kanbanMoveBtn} onClick={() => onCopy(post)}>⎘</button>
+          {movable.map(c => (
+            <button key={c.id} className={styles.kanbanMoveBtn} onClick={() => onMove(post.id, c.id)}>
+              → {c.label}
+            </button>
+          ))}
+          <button className={styles.removeBtn} style={{ fontSize: 14, marginLeft: 'auto' }} onClick={() => onRemove(post.id)}>✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KanbanBoard({ posts, onEdit, onCopy, onMove, onRemove }) {
+  return (
+    <div className={styles.kanban}>
+      {KANBAN_COLS.map(col => {
+        const colPosts = posts.filter(p => p.status === col.id || (col.id === 'concept' && p.status === 'genereren'));
+        return (
+          <div key={col.id} className={styles.kanbanCol}>
+            <div className={styles.kanbanColHeader}>
+              <span>{col.label}</span>
+              <span>{colPosts.length}</span>
+            </div>
+            <div className={styles.kanbanCards}>
+              {colPosts.length === 0 && (
+                <p style={{ fontSize: 13, color: 'var(--text-dim)', padding: '8px 4px', textAlign: 'center' }}>Empty</p>
+              )}
+              {colPosts.map(post => (
+                <KanbanCard key={post.id} post={post} onEdit={onEdit} onCopy={onCopy} onMove={onMove} onRemove={onRemove} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PostsBoard({ posts, update, remove }) {
   const [editPost, setEditPost] = useState(null);
+  const [view, setView] = useState('list');
 
   const copyText = (post) => {
     const text = post.editedText ?? extractMainText(post.data, post.contentType);
     navigator.clipboard.writeText(text);
   };
 
+  const sectionHeader = (
+    <div className={styles.viewToggle}>
+      <button className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`} onClick={() => setView('list')}>≡ List</button>
+      <button className={`${styles.viewBtn} ${view === 'kanban' ? styles.viewBtnActive : ''}`} onClick={() => setView('kanban')}>⊞ Kanban</button>
+    </div>
+  );
+
   return (
     <>
-      <Section title={`Posts (${posts.length})`} icon="✦" onRefresh={() => {}} loading={false}>
+      <Section
+        title={`Posts (${posts.length})`}
+        icon="✦"
+        onRefresh={() => {}}
+        loading={false}
+        extra={sectionHeader}
+      >
         {posts.length === 0 && (
           <p className={styles.empty}>Nog geen posts opgeslagen. Genereer content via het Ideeënboard.</p>
         )}
-        {posts.map(post => (
+
+        {view === 'kanban' && posts.length > 0 && (
+          <KanbanBoard
+            posts={posts}
+            onEdit={setEditPost}
+            onCopy={copyText}
+            onMove={(id, status) => update(id, { status })}
+            onRemove={remove}
+          />
+        )}
+
+        {view === 'list' && posts.map(post => (
           <div key={post.id} className={styles.postCard}>
             <div className={styles.postCardTop}>
               <div className={styles.postMeta}>
-                <Badge color={post.platform === 'instagram' ? 'coral' : 'blue'}>{post.platform}</Badge>
+                <Badge color={PLATFORM_COLOR[post.platform] || 'gold'}>{post.platform}</Badge>
                 <Badge color="dim">{TYPE_LABELS[post.contentType]}</Badge>
                 {post.status === 'genereren'
                   ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-dim)' }}><Spinner /> Genereren…</span>
@@ -841,7 +994,7 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const startGeneration = useCallback(async (idea, platform, contentType, extraContext) => {
+  const startGeneration = useCallback(async (idea, platform, contentType, extraContext, hookType) => {
     const id = idea.id;
     const post = savePost({ title: idea.title, platform, contentType, data: null, status: 'genereren' });
     setGenerations(prev => ({ ...prev, [id]: { loading: true, result: null, error: null, platform, contentType, postId: post.id } }));
@@ -851,7 +1004,7 @@ export default function App() {
     if (idea.source) parts.push(`Bron: ${idea.source}`);
     const topic = parts.join('\n\n');
     try {
-      const res = await api.generateContent(topic, platform, contentType, extraContext);
+      const res = await api.generateContent(topic, platform, contentType, extraContext, hookType);
       updatePost(post.id, { data: res.data, status: 'concept' });
       setGenerations(prev => ({ ...prev, [id]: { ...prev[id], loading: false, result: res.data } }));
       showToast(`Content klaar: "${idea.title.slice(0, 35)}"`);

@@ -318,18 +318,36 @@ async def get_instagram_posts(
 @app.post("/api/generate-content")
 async def generate_content(payload: dict):
     """Generate content using the Beyond Borders Protocol framework."""
-    from content_framework import BRAND_CONTEXT, INSTAGRAM_RULES, LINKEDIN_RULES, FORMATS
+    from content_framework import BRAND_CONTEXT, INSTAGRAM_RULES, LINKEDIN_RULES, TWITTER_RULES, FORMATS, HOOK_FORMULAS
 
     topic = payload.get("topic", "")
     platform = payload.get("platform", "instagram")
     content_type = payload.get("content_type", "instagram_carousel")
     extra_context = payload.get("extra_context", "")
+    hook_type = payload.get("hook_type", "")
 
     fmt = FORMATS.get(content_type)
     if not fmt:
         raise HTTPException(400, f"Onbekend content type: {content_type}")
 
-    platform_rules = INSTAGRAM_RULES if platform == "instagram" else LINKEDIN_RULES
+    if platform == "instagram":
+        platform_rules = INSTAGRAM_RULES
+    elif platform == "twitter":
+        platform_rules = TWITTER_RULES
+    else:
+        platform_rules = LINKEDIN_RULES
+
+    hook_instructions = ""
+    if hook_type and hook_type in HOOK_FORMULAS:
+        h = HOOK_FORMULAS[hook_type]
+        formulas_text = "\n".join(f"  - {f}" for f in h["formulas"])
+        hook_instructions = f"""
+HOOK TYPE: {h['label']}
+{h['description']}
+
+Gebruik één van deze haakformules als opening:
+{formulas_text}
+"""
 
     extra = f"\nExtra context (klantuitspraak / anekdote / situatie):\n{extra_context}" if extra_context else ""
 
@@ -339,7 +357,7 @@ MERKCONTEXT:
 {BRAND_CONTEXT}
 
 {platform_rules}
-
+{hook_instructions}
 {fmt['instructions']}
 
 Retourneer ALLEEN geldige JSON, geen markdown, geen uitleg erbuiten."""

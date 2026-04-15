@@ -57,9 +57,23 @@ PLATFORM REGELS LINKEDIN:
 - LinkedIn-lezers zijn ondernemers: gebruik cijfers, concrete resultaten, eerlijke trade-offs
 """
 
+TWITTER_RULES = """
+PLATFORM REGELS TWITTER/X:
+- Tweet 1 is alles — de hook bepaalt of mensen de thread lezen
+- Threads werken het best met 7-10 tweets inclusief hook tweet
+- Elke tweet staat op zichzelf en is ook los te lezen
+- Gebruik witruimte en korte zinnen — mobielvriendelijk schrijven
+- Geen externe links in de thread, alleen optioneel in de laatste tweet
+- Gebruik cijfers, percentages en specifieke bedragen — werkt ook op X
+- Spaarzaam emoji — maximaal 1-2 per thread, nooit puur decoratief
+- Eerste tweet eindigt met ↓ of een dubbele punt om door te klikken
+- Elk tweet maximaal 280 tekens
+"""
+
 FORMATS = {
     "instagram_carousel": {
-        "label": "Carrousel (educatief)",
+        "label": "Carousel",
+        "description": "Educational slide series. Bold hook on slide 1, one point per slide, CTA on slide 10.",
         "instructions": """
 Maak een Instagram carrousel over Bali vastgoed investeren met de volgende structuur:
 
@@ -86,7 +100,8 @@ Geef de output als JSON:
 """,
     },
     "instagram_reel": {
-        "label": "Reel Script (30 sec)",
+        "label": "Reel Script",
+        "description": "30-second video script. Hook → Setup → Value → CTA.",
         "instructions": """
 Schrijf een Reel script van 30 seconden over Bali vastgoed investeren met deze structuur:
 
@@ -109,7 +124,8 @@ Geef de output als JSON:
 """,
     },
     "instagram_story": {
-        "label": "Story Reeks",
+        "label": "Story Series",
+        "description": "4-story sequence. Story 1 includes a poll to drive engagement.",
         "instructions": """
 Schrijf een Story reeks van 4 Stories over Bali vastgoed investeren:
 
@@ -131,7 +147,8 @@ Geef de output als JSON:
 """,
     },
     "linkedin_verhaal": {
-        "label": "Verhaalpost",
+        "label": "The Story Post",
+        "description": "Personal narrative with a turning point and lesson. Drives comments.",
         "instructions": """
 Schrijf een LinkedIn verhaalpost over Bali vastgoed investeren voor Nederlandse ondernemers.
 Gebruik deze structuur:
@@ -163,7 +180,8 @@ Geef de output als JSON:
 """,
     },
     "linkedin_contrair": {
-        "label": "Contraire Post",
+        "label": "The Contrarian Take",
+        "description": "Challenge a common belief with 3 reasons. Sparks debate and reach.",
         "instructions": """
 Schrijf een LinkedIn contraire post over een gangbare misvatting over Bali vastgoed investeren.
 Gebruik deze structuur:
@@ -194,7 +212,8 @@ Geef de output als JSON:
 """,
     },
     "linkedin_lijst": {
-        "label": "Lijstpost",
+        "label": "The List Post",
+        "description": "Numbered insights after a credibility builder. Easy to save and share.",
         "instructions": """
 Schrijf een LinkedIn lijstpost over Bali vastgoed investeren voor Nederlandse ondernemers.
 Gebruik deze structuur:
@@ -228,7 +247,8 @@ Geef de output als JSON:
 """,
     },
     "linkedin_howto": {
-        "label": "Hoe-doe-je-het",
+        "label": "The How-To",
+        "description": "Step-by-step guide with ↳ details. Actionable and bookmarkable.",
         "instructions": """
 Schrijf een LinkedIn hoe-doe-je-het post over Bali vastgoed investeren.
 Gebruik deze structuur:
@@ -263,31 +283,125 @@ Geef de output als JSON:
 }
 """,
     },
+    "twitter_tutorial": {
+        "label": "Tutorial Thread",
+        "description": "Step-by-step how-to across 7-8 tweets. Hook + promise, then one step per tweet.",
+        "instructions": """
+Schrijf een Twitter/X tutorial thread over Bali vastgoed investeren voor Nederlandse ondernemers.
+Gebruik deze structuur:
+
+Tweet 1: Hook + belofte van waarde, eindig met ↓
+Tweets 2-7: Één stap per tweet met concreet detail (bijv. PT PMA, due diligence, notaris, locatiekeuze, property manager, belasting)
+Tweet 8: Samenvatting + CTA
+
+Elk tweet maximaal 280 tekens. Schrijf als gesproken tekst — direct en zonder buzzwords.
+Gebruik cijfers en specifieke details uit de Bali vastgoedmarkt.
+
+Geef de output als JSON:
+{
+  "tweets": [
+    {"nummer": 1, "tekst": "..."},
+    {"nummer": 2, "tekst": "..."}
+  ]
+}
+""",
+    },
+    "twitter_story": {
+        "label": "Story Thread",
+        "description": "Narrative thread building tension across 7-8 tweets. Hook, story beats, resolution.",
+        "instructions": """
+Schrijf een Twitter/X story thread over een ervaring met Bali vastgoed investeren.
+Gebruik deze structuur:
+
+Tweet 1: Prikkelende openingszin — onverwachte wending of resultaat, eindig met ↓
+Tweets 2-6: Story-beats die spanning opbouwen (situatie → uitdaging → poging → keerpunt)
+Tweet 7: Ontknoping en resultaat in concrete termen (rendement, tijdlijn, bedragen)
+Tweet 8: De les voor de lezer + vraag om reactie
+
+Elk tweet maximaal 280 tekens. Schrijf vanuit persoonlijke ervaring of die van een klant (geanonimiseerd).
+
+Geef de output als JSON:
+{
+  "tweets": [
+    {"nummer": 1, "tekst": "..."},
+    {"nummer": 2, "tekst": "..."}
+  ]
+}
+""",
+    },
+    "twitter_breakdown": {
+        "label": "Breakdown Thread",
+        "description": "Analyse a trend or topic in Bali real estate. What it is, why it matters, your take.",
+        "instructions": """
+Schrijf een Twitter/X breakdown thread die een trend, structuur of concept in de Bali vastgoedmarkt analyseert.
+Gebruik deze structuur:
+
+Tweet 1: [Trend/concept] is aan het veranderen. Hier is waarom dat belangrijk is ↓
+Tweets 2-6: Analyse-punten (wat het is, hoe het werkt, cijfers en feiten, gevolgen voor investeerders)
+Tweet 7: Jouw conclusie of standpunt
+Tweet 8: Praktische implicatie voor de Nederlandse ondernemer + CTA
+
+Elk tweet maximaal 280 tekens. Gebruik cijfers en feiten, geen meningen zonder onderbouwing.
+
+Geef de output als JSON:
+{
+  "tweets": [
+    {"nummer": 1, "tekst": "..."},
+    {"nummer": 2, "tekst": "..."}
+  ]
+}
+""",
+    },
 }
 
 HOOK_FORMULAS = {
-    "instagram": [
-        "Dit is wat een Bali villa jaarlijks oplevert — en wat niemand je vertelt.",
-        "Ik heb uitgerekend wat box 3 Nederlandse ondernemers écht kost.",
-        "Vorige week sprak ik een ondernemer die zijn PT PMA verkeerd had opgezet. Dit was het gevolg.",
-        "Hoe je als Nederlander een villa op Bali koopt (zonder Indonesisch staatsburger te zijn):",
-        "Stop met zoeken naar 'veilig rendement' in Nederland. Doe dit in plaats daarvan:",
-        "Unpopular opinion: off-plan kopen op Bali is minder risicovol dan de meeste mensen denken.",
-        "Iedereen zegt 'Bali is te riskant'. Hier zijn de cijfers.",
-        "Wat kost het écht om een villa te beheren als je in Nederland woont?",
-        "12% rendement op Bali. 0,36% op een Nederlandse spaarrekening. Laten we praten.",
-        "Drie fouten die ik zie bij elke eerste Bali villa-investering.",
-    ],
-    "linkedin": [
-        "Ik had het mis over investeren buiten Nederland.",
-        "Niemand vertelt Nederlandse ondernemers dit over PT PMA op Bali.",
-        "Vorige week belde een klant me op. Zijn villa in Canggu bracht vorige maand €4.200 op.",
-        "5 dingen die ik leerde na het begeleiden van 50+ Bali villa-transacties:",
-        "Unpopular opinion: leasehold op Bali is veiliger dan veel mensen denken.",
-        "Iedereen zegt 'investeer niet in het buitenland'. Hier is waarom ik het er niet mee eens ben.",
-        "Hoe een Nederlandse ondernemer in 6 stappen eigenaar wordt van een Bali villa:",
-        "Box 3. Hoge grondprijzen. Laag rendement. Er is een alternatief.",
-        "Wat ik wou dat ik wist voordat ik mijn eerste property deal op Bali begeleidde.",
-        "De drie vragen die elke investeerder stelt voordat ze ja zeggen tegen Bali.",
-    ],
+    "curiosity": {
+        "label": "Curiosity Hook",
+        "description": "Tease an insight without revealing it — makes people need to read on.",
+        "formulas": [
+            "I was wrong about [common belief].",
+            "The real reason [outcome] happens isn't what you think.",
+            "[Impressive result] — and it only took [surprisingly short time].",
+            "Nobody talks about [insider knowledge].",
+        ],
+    },
+    "story": {
+        "label": "Story Hook",
+        "description": "Open with a moment in time — creates immediate context and curiosity.",
+        "formulas": [
+            "Last week, [unexpected thing] happened.",
+            "I almost [big mistake/failure].",
+            "3 years ago, I [past state]. Today, [current state].",
+            "[Person] told me something I'll never forget.",
+        ],
+    },
+    "value": {
+        "label": "Value Hook",
+        "description": "Lead with the outcome — readers know exactly what they'll get.",
+        "formulas": [
+            "How to [desirable outcome] (without [common pain]):",
+            "[Number] [things] that [outcome]:",
+            "The simplest way to [outcome]:",
+            "Stop [common mistake]. Do this instead:",
+        ],
+    },
+    "contrarian": {
+        "label": "Contrarian Hook",
+        "description": "Challenge a widely-held belief — triggers disagreement and high engagement.",
+        "formulas": [
+            "Unpopular opinion: [bold statement]",
+            "[Common advice] is wrong. Here's why:",
+            "I stopped [common practice] and [positive result].",
+            "Everyone says [X]. The truth is [Y].",
+        ],
+    },
+    "social_proof": {
+        "label": "Social Proof Hook",
+        "description": "Open with a result or authority — builds credibility immediately.",
+        "formulas": [
+            "We [achieved result] in [timeframe]. Here's the full story:",
+            "[Number] people asked me about [topic]. Here's my answer:",
+            "[Authority figure] taught me [lesson].",
+        ],
+    },
 }
