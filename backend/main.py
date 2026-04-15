@@ -102,6 +102,35 @@ async def claude_json(system: str, user: str, max_tokens: int = 2000) -> Union[d
         clean = clean.strip()
         return json.loads(clean)
 
+
+def _extract_json_array(text: str) -> list:
+    """Robustly extract the first valid JSON array from text that may contain preamble or citations."""
+    clean = text.strip()
+    if clean.startswith("```json"):
+        clean = clean[7:]
+    elif clean.startswith("```"):
+        clean = clean[3:]
+    if clean.endswith("```"):
+        clean = clean[:-3]
+    clean = clean.strip()
+
+    decoder = json.JSONDecoder()
+    i = 0
+    while i < len(clean):
+        idx = clean.find("[", i)
+        if idx == -1:
+            break
+        try:
+            result, _ = decoder.raw_decode(clean, idx)
+            if isinstance(result, list):
+                return result
+        except json.JSONDecodeError:
+            pass
+        i = idx + 1
+
+    # Last resort: try the whole string
+    return json.loads(clean)
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -135,20 +164,7 @@ Return ONLY a JSON array with this exact structure, no markdown, no preamble:
 
     try:
         result = await claude_complete(system, f"Search for the latest news about: {query}")
-        # Strip markdown code fences properly (lstrip strips chars, not substrings)
-        clean = result.strip()
-        if clean.startswith("```json"):
-            clean = clean[7:]
-        elif clean.startswith("```"):
-            clean = clean[3:]
-        if clean.endswith("```"):
-            clean = clean[:-3]
-        clean = clean.strip()
-        start = clean.find("[")
-        end = clean.rfind("]") + 1
-        if start == -1 or end == 0:
-            raise ValueError(f"Geen JSON array gevonden in Claude-antwoord. Antwoord: {clean[:300]}")
-        articles = json.loads(clean[start:end])
+        articles = _extract_json_array(result)
         return {"data": articles, "fetched_at": datetime.utcnow().isoformat()}
     except Exception as e:
         raise HTTPException(500, f"News fetch failed: {str(e)}")
