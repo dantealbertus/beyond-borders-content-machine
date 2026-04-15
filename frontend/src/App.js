@@ -353,9 +353,12 @@ function InstagramSection({ onSave }) {
             />
           </div>
         </div>
-        <button className={styles.searchBtn} onClick={fetch_} disabled={loading}>
+        <button className={styles.searchBtn} onClick={fetch_} disabled={loading || (mode === 'creator' && !usernames.trim())}>
           {loading ? <><Spinner /> Zoeken…</> : '◎ Zoeken'}
         </button>
+        {mode === 'creator' && !usernames.trim() && (
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: -6 }}>Vul minimaal één gebruikersnaam in om te zoeken.</p>
+        )}
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
