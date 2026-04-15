@@ -1,17 +1,17 @@
 :root {
   --bg-deep:    #0a0f0d;
-  --bg-card:    #111a15;
-  --bg-hover:   #162019;
-  --border:     #1e2e24;
-  --border-lit: #2a4033;
+  --bg-card:    #141f18;
+  --bg-hover:   #1a271e;
+  --border:     #253c2d;
+  --border-lit: #335443;
   --gold:       #c9a84c;
-  --gold-dim:   #8a6e2f;
+  --gold-dim:   #a8863e;
   --gold-glow:  rgba(201,168,76,0.12);
   --green-dark: #0d3022;
-  --green-mid:  #155c3a;
-  --text-hi:    #e8e2d4;
-  --text-mid:   #9a9488;
-  --text-dim:   #5a5650;
+  --green-mid:  #1e7a4e;
+  --text-hi:    #ede7d9;
+  --text-mid:   #b8b0a0;
+  --text-dim:   #807870;
   --coral:      #c97b4c;
   --blue:       #4c8ec9;
   --font-serif: 'Cormorant Garamond', Georgia, serif;
