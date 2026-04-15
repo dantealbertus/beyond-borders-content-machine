@@ -45,29 +45,40 @@ async def _claude_post(client, headers, body) -> str:
     return "\n".join(texts)
 
 
-async def claude_complete(system: str, user: str, max_tokens: int = 1500) -> str:
-    """Try with web search; fall back to plain Claude if unavailable."""
-    base_headers = {
+async def claude_news(system: str, user: str, max_tokens: int = 3000) -> list:
+    """Fetch news via web search, with fallback to claude_json on any failure."""
+    headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta": "web-search-2025-03-05",
         "content-type": "application/json",
     }
-    base_body = {
+    body = {
         "model": "claude-sonnet-4-6",
         "max_tokens": max_tokens,
         "system": system,
         "messages": [{"role": "user", "content": user}],
+        "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
     }
     async with httpx.AsyncClient(timeout=90) as client:
         try:
-            return await _claude_post(
-                client,
-                {**base_headers, "anthropic-beta": "web-search-2025-03-05"},
-                {**base_body, "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]},
-            )
+            resp = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
+            if resp.is_success:
+                data = resp.json()
+                # Only include non-empty text blocks
+                texts = [b["text"] for b in data.get("content", []) if b.get("type") == "text" and b.get("text", "").strip()]
+                if texts:
+                    articles = _extract_json_array("\n".join(texts))
+                    if isinstance(articles, list) and articles:
+                        return articles
         except Exception:
-            # Web search unavailable or failed — fall back to plain call
-            return await _claude_post(client, base_headers, base_body)
+            pass
+
+    # Fallback: no web search — uses training data
+    result = await claude_json(system, user, max_tokens=max_tokens)
+    if isinstance(result, list):
+        return result
+    raise ValueError(f"Verwachtte een lijst, kreeg: {type(result)}")
 
 
 async def claude_json(system: str, user: str, max_tokens: int = 2000) -> Union[dict, list]:
@@ -163,9 +174,7 @@ Return ONLY a JSON array with this exact structure, no markdown, no preamble:
 ]"""
 
     try:
-        articles = await claude_json(system, f"Search for the latest news about: {query}", max_tokens=3000)
-        if not isinstance(articles, list):
-            raise ValueError(f"Verwachtte een lijst, kreeg: {type(articles)}")
+        articles = await claude_news(system, f"Search for the latest news about: {query}")
         return {"data": articles, "fetched_at": datetime.utcnow().isoformat()}
     except Exception as e:
         raise HTTPException(500, f"News fetch failed: {str(e)}")
