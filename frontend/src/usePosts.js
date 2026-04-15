@@ -15,8 +15,8 @@ export function usePosts() {
   const save = (post) => {
     const entry = {
       id: Date.now(),
-      ...post,
       status: 'concept',
+      ...post,
       savedAt: new Date().toISOString(),
     };
     setPosts(prev => [entry, ...prev]);

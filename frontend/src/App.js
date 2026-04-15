@@ -619,16 +619,6 @@ function ContentGenerator({ idea, onClose, onSavePost, generation, onGenerate })
         </button>
 
         {error && <p className={styles.error}>{error}</p>}
-        {result && (
-          <button
-            className={styles.saveBtn}
-            style={{ alignSelf: 'flex-start' }}
-            onClick={handleSavePost}
-            disabled={saved}
-          >
-            {saved ? '✓ Opgeslagen in Posts' : '+ Opslaan als post'}
-          </button>
-        )}
         <ContentResult result={result} contentType={contentType} />
       </div>
     </div>
@@ -647,7 +637,7 @@ const TYPE_LABELS = {
   linkedin_howto:     'Hoe-doe-je-het',
 };
 
-const STATUS_COLORS = { concept: 'gold', klaar: 'blue', geplaatst: 'green' };
+const STATUS_COLORS = { concept: 'gold', klaar: 'blue', geplaatst: 'green', mislukt: 'coral' };
 
 function extractMainText(data, contentType) {
   if (!data) return '';
@@ -707,31 +697,44 @@ function PostsBoard({ posts, update, remove }) {
               <div className={styles.postMeta}>
                 <Badge color={post.platform === 'instagram' ? 'coral' : 'blue'}>{post.platform}</Badge>
                 <Badge color="dim">{TYPE_LABELS[post.contentType]}</Badge>
-                <Badge color={STATUS_COLORS[post.status] || 'gold'}>{post.status}</Badge>
+                {post.status === 'genereren'
+                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-dim)' }}><Spinner /> Genereren…</span>
+                  : <Badge color={STATUS_COLORS[post.status] || 'gold'}>{post.status}</Badge>
+                }
               </div>
               <span className={styles.ideaDate}>{new Date(post.savedAt).toLocaleDateString('nl-NL')}</span>
             </div>
             <p className={styles.ideaTitle}>{post.title}</p>
             <p className={styles.postPreview}>
-              {(post.editedText ?? extractMainText(post.data, post.contentType)).slice(0, 140)}…
+              {post.status === 'genereren'
+                ? 'Content wordt aangemaakt…'
+                : `${(post.editedText ?? extractMainText(post.data, post.contentType)).slice(0, 140)}…`
+              }
             </p>
-            <div className={styles.ideaActions}>
-              <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 14 }}
-                onClick={() => setEditPost(post)}>
-                ✎ Bewerken
-              </button>
-              <button className={styles.saveBtn} onClick={() => copyText(post)}>
-                ⎘ Kopiëren
-              </button>
-              <div className={styles.statusBtns}>
-                {['concept', 'klaar', 'geplaatst'].map(s => (
-                  <button key={s}
-                    className={`${styles.statusBtn} ${post.status === s ? styles.statusActive : ''}`}
-                    onClick={() => update(post.id, { status: s })}>{s}</button>
-                ))}
+            {post.status !== 'genereren' && (
+              <div className={styles.ideaActions}>
+                <button className={styles.generateBtn} style={{ padding: '6px 14px', fontSize: 14 }}
+                  onClick={() => setEditPost(post)}>
+                  ✎ Bewerken
+                </button>
+                <button className={styles.saveBtn} onClick={() => copyText(post)}>
+                  ⎘ Kopiëren
+                </button>
+                <div className={styles.statusBtns}>
+                  {['concept', 'klaar', 'geplaatst'].map(s => (
+                    <button key={s}
+                      className={`${styles.statusBtn} ${post.status === s ? styles.statusActive : ''}`}
+                      onClick={() => update(post.id, { status: s })}>{s}</button>
+                  ))}
+                </div>
+                <button className={styles.removeBtn} onClick={() => remove(post.id)}>✕</button>
               </div>
-              <button className={styles.removeBtn} onClick={() => remove(post.id)}>✕</button>
-            </div>
+            )}
+            {post.status === 'genereren' && (
+              <div className={styles.ideaActions}>
+                <button className={styles.removeBtn} onClick={() => remove(post.id)}>✕</button>
+              </div>
+            )}
           </div>
         ))}
       </Section>
@@ -840,20 +843,24 @@ export default function App() {
 
   const startGeneration = useCallback(async (idea, platform, contentType, extraContext) => {
     const id = idea.id;
-    setGenerations(prev => ({ ...prev, [id]: { loading: true, result: null, error: null, platform, contentType } }));
+    const post = savePost({ title: idea.title, platform, contentType, data: null, status: 'genereren' });
+    setGenerations(prev => ({ ...prev, [id]: { loading: true, result: null, error: null, platform, contentType, postId: post.id } }));
+    setActiveTab('posts');
     const parts = [idea.title];
     if (idea.content && idea.content !== idea.title) parts.push(idea.content);
     if (idea.source) parts.push(`Bron: ${idea.source}`);
     const topic = parts.join('\n\n');
     try {
       const res = await api.generateContent(topic, platform, contentType, extraContext);
+      updatePost(post.id, { data: res.data, status: 'concept' });
       setGenerations(prev => ({ ...prev, [id]: { ...prev[id], loading: false, result: res.data } }));
       showToast(`Content klaar: "${idea.title.slice(0, 35)}"`);
     } catch (e) {
+      updatePost(post.id, { status: 'mislukt' });
       setGenerations(prev => ({ ...prev, [id]: { ...prev[id], loading: false, error: e.message } }));
       showToast(`Genereren mislukt`);
     }
-  }, [showToast]);
+  }, [savePost, updatePost, showToast]);
 
   const handleSave = (idea) => {
     save(idea);
